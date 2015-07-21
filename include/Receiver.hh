@@ -4,39 +4,32 @@
 #include <atomic>
 #include <memory>
 
-#include "Source.hh"
+#include "Producer.hh"
 
-template<typename Input>
+template<typename T>
 class Receiver {
 public:
-  Receiver(std::function<void(const std::shared_ptr<Input>)> func, std::shared_ptr<Source<Input> > source)
-    : source(source), func(func), running(true), thread(&Receiver::Write, this) { }
+  Receiver(std::shared_ptr<Producer<T> > source)
+    : source(source) { }
 
-  ~Receiver(){
-    if(running){
-      running = false;
-      thread.join();
-    }
-  }
+  virtual ~Receiver() { }
 
 protected:
-  void Start(){
-    if(!running){
-      thread = std::thread(&Receiver::Write, this);
-    }
+  const std::shared_ptr<T> Read(){
+    return source->Pop();
   }
 
 private:
   void Write(){
     while(running){
       auto obj = source->Pop();
-      std::shared_ptr<Input> shared_obj(std::move(obj));
+      std::shared_ptr<T> shared_obj(std::move(obj));
       func(shared_obj);
     }
   }
 
-  std::shared_ptr<Source<Input> > source;
-  std::function<void(const std::shared_ptr<Input>)> func;
+  std::shared_ptr<Producer<T> > source;
+  std::function<void(const std::shared_ptr<T>)> func;
   std::atomic_bool running;
   std::thread thread;
 };
