@@ -1,48 +1,27 @@
 #ifndef _SOURCE_H_
 #define _SOURCE_H_
 
-#include <atomic>
-#include <thread>
-
+#include "StoppableThread.hh"
 #include "Producer.hh"
 
 template<typename T>
-class Source : public Producer<T> {
+class Source : public Producer<T>, public StoppableThread {
 public:
   Source(std::function<std::unique_ptr<T>() > func)
-    : func(func), running(false) {
+    : func(func) {
     Start();
   }
 
   virtual ~Source(){
     Producer<T>::ForceStop();
-    Stop();
-  }
-
-  void Start(){
-    if(!running){
-      running = true;
-      thread = std::thread(&Source<T>::Run, this);
-    }
-  }
-
-  void Stop(){
-    if(running){
-      running = false;
-      thread.join();
-    }
   }
 
 private:
-  void Run(){
-    while(running){
-      Producer<T>::Push(func());
-    }
+  void Iteration(){
+    Producer<T>::Push(func());
   }
 
   std::function<std::unique_ptr<T>() > func;
-  std::thread thread;
-  std::atomic_bool running;
 };
 
 template<typename T>

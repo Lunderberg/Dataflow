@@ -4,48 +4,30 @@
 #include <functional>
 #include <memory>
 
+#include "StoppableThread.hh"
 #include "Producer.hh"
 #include "Receiver.hh"
 
 template<typename Input, typename Output>
-class Transform : public Receiver<Input>, public Producer<Output> {
+class Transform : public Receiver<Input>, public Producer<Output>, public StoppableThread {
 public:
   Transform(std::function<std::unique_ptr<Output>(const std::shared_ptr<Input>) > func,
             std::shared_ptr<Producer<Input> > source)
-    : Receiver<Input>(source), func(func), running(false) {
+    : Receiver<Input>(source), func(func) {
     Start();
   }
 
   virtual ~Transform(){
     Producer<Output>::ForceStop();
-    Stop();
-  }
-
-  void Start(){
-    if(!running){
-      running = true;
-      thread = std::thread(&Transform<Input, Output>::Run, this);
-    }
-  }
-
-  void Stop(){
-    if(running){
-      running = false;
-      thread.join();
-    }
   }
 
 private:
-  void Run(){
-    while(running){
-      auto obj = Receiver<Input>::Read();
-      Producer<Output>::Push(func(obj));
-    }
+  void Iteration(){
+    auto obj = Receiver<Input>::Read();
+    Producer<Output>::Push(func(obj));
   }
 
   std::function<std::unique_ptr<Output>(const std::shared_ptr<Input>) > func;
-  std::thread thread;
-  std::atomic_bool running;
 };
 
 template<typename Input, typename Output, typename U>
