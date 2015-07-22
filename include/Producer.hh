@@ -16,11 +16,8 @@ class Producer {
 public:
   Producer() : max_queue_size(10), force_stop(false) { }
 
-  virtual ~Producer() { }
-
-protected:
-  void ForceStop(){
-    force_stop = true;
+  virtual ~Producer() {
+    ForceStop();
   }
 
   void Push(std::unique_ptr<T> item){
@@ -35,6 +32,11 @@ protected:
 
     queue.push(std::move(item));
     can_read_data.notify_one();
+  }
+
+protected:
+  void ForceStop(){
+    force_stop = true;
   }
 
 private:

@@ -25,8 +25,8 @@ void print_values(const std::shared_ptr<double> value){
 
 int main(){
   auto step1 = make_source(produce_count);
-  auto step2 = make_transform(square_values, step1);
-  auto step3 = make_sink(print_values, step2);
+  auto step2 = make_transform(square_values, step1->GetProducer());
+  auto step3 = make_sink(print_values, step2->GetProducer());
 
   std::cout << "Started" << std::endl;
   std::this_thread::sleep_for(std::chrono::seconds(5));

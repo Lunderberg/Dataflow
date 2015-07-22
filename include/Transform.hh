@@ -9,25 +9,33 @@
 #include "Receiver.hh"
 
 template<typename Input, typename Output>
-class Transform : public Receiver<Input>, public Producer<Output>, public StoppableThread {
+class Transform : public StoppableThread {
 public:
   Transform(std::function<std::unique_ptr<Output>(const std::shared_ptr<Input>) > func,
             std::shared_ptr<Producer<Input> > source)
-    : Receiver<Input>(source), func(func) {
+    : func(func),
+      receiver(std::make_shared<Receiver<Input> >(source)),
+      producer(std::make_shared<Producer<Output> >()) {
     Start();
   }
 
-  virtual ~Transform(){
-    Producer<Output>::ForceStop();
+  std::shared_ptr<Receiver<Input> > GetReceiver(){
+    return receiver;
+  }
+
+  std::shared_ptr<Producer<Output> > GetProducer(){
+    return producer;
   }
 
 private:
   void Iteration(){
-    auto obj = Receiver<Input>::Read();
-    Producer<Output>::Push(func(obj));
+    auto obj = receiver->Read();
+    producer->Push(func(obj));
   }
 
   std::function<std::unique_ptr<Output>(const std::shared_ptr<Input>) > func;
+  std::shared_ptr<Receiver<Input> > receiver;
+  std::shared_ptr<Producer<Output> > producer;
 };
 
 template<typename Input, typename Output, typename U>

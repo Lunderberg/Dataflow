@@ -14,7 +14,6 @@ public:
 
   virtual ~Receiver() { }
 
-protected:
   const std::shared_ptr<T> Read(){
     return source->Pop();
   }

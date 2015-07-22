@@ -1,24 +1,31 @@
 #ifndef _SINK_H_
 #define _SINK_H_
 
+#include <memory>
+
 #include "StoppableThread.hh"
 #include "Producer.hh"
 #include "Receiver.hh"
 
 template<typename T>
-class Sink : public Receiver<T>, public StoppableThread  {
+class Sink : public StoppableThread  {
 public:
   Sink(std::function<void(const std::shared_ptr<T>)> func, std::shared_ptr<Producer<T> > source)
-    : Receiver<T>(source), func(func) {
+    : func(func), receiver(std::make_shared<Receiver<T> >(source)) {
     Start();
+  }
+
+  std::shared_ptr<Receiver<T> > GetReceiver(){
+    return receiver;
   }
 
 private:
   void Iteration(){
-    func(Receiver<T>::Read());
+    func(receiver->Read());
   }
 
   std::function<void(const std::shared_ptr<T>)> func;
+  std::shared_ptr<Receiver<T> > receiver;
 };
 
 template<typename T, typename U>

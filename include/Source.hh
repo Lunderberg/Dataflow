@@ -1,27 +1,30 @@
 #ifndef _SOURCE_H_
 #define _SOURCE_H_
 
+#include <memory>
+
 #include "StoppableThread.hh"
 #include "Producer.hh"
 
 template<typename T>
-class Source : public Producer<T>, public StoppableThread {
+class Source : public StoppableThread {
 public:
   Source(std::function<std::unique_ptr<T>() > func)
-    : func(func) {
+    : func(func), producer(std::make_shared<Producer<T> >()) {
     Start();
   }
 
-  virtual ~Source(){
-    Producer<T>::ForceStop();
+  std::shared_ptr<Producer<T> > GetProducer(){
+    return producer;
   }
 
 private:
   void Iteration(){
-    Producer<T>::Push(func());
+    producer->Push(func());
   }
 
   std::function<std::unique_ptr<T>() > func;
+  std::shared_ptr<Producer<T> > producer;
 };
 
 template<typename T>
