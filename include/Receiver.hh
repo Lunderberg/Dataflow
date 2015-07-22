@@ -20,18 +20,8 @@ protected:
   }
 
 private:
-  void Write(){
-    while(running){
-      auto obj = source->Pop();
-      std::shared_ptr<T> shared_obj(std::move(obj));
-      func(shared_obj);
-    }
-  }
-
   std::shared_ptr<Producer<T> > source;
-  std::function<void(const std::shared_ptr<T>)> func;
   std::atomic_bool running;
-  std::thread thread;
 };
 
 #endif /* _RECEIVER_H_ */
