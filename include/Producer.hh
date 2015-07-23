@@ -4,7 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <deque>
+#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -85,8 +85,8 @@ private:
     queue_locations.erase(requester);
   }
 
-  std::deque<std::shared_ptr<T> > queue;
-  std::map<Receiver<T>*, typename std::deque<std::shared_ptr<T> >::iterator> queue_locations;
+  std::list<std::shared_ptr<T> > queue;
+  std::map<Receiver<T>*, typename std::list<std::shared_ptr<T> >::iterator> queue_locations;
   size_t max_queue_size;
 
   std::condition_variable can_read_data;
