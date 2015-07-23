@@ -4,9 +4,10 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <queue>
 
 template<typename T>
 class Receiver;
@@ -30,7 +31,7 @@ public:
       return;
     }
 
-    queue.push(std::move(item));
+    queue.push_back(std::move(item));
     can_read_data.notify_one();
   }
 
@@ -41,9 +42,17 @@ protected:
 
 private:
   friend class Receiver<T>;
-  std::unique_ptr<T> Pop(){
+  const std::shared_ptr<T> Pop(Receiver<T>* requester){
     std::unique_lock<std::mutex> lock(queue_mutex);
-    while(queue.empty() && !force_stop){
+
+    // New clients start at the beginning of the queue.
+    if(!queue_locations.count(requester)){
+      queue_locations[requester] = queue.begin();
+    }
+
+    auto& location = queue_locations[requester];
+
+    while(location==queue.end() && !force_stop){
       can_read_data.wait_for(lock, std::chrono::seconds(1));
     }
 
@@ -51,13 +60,33 @@ private:
       return NULL;
     }
 
-    auto output = std::move(queue.front());
-    queue.pop();
-    can_write_data.notify_one();
+    auto output = *location;
+    location++;
+    UpdateQueue();
     return output;
   }
 
-  std::queue<std::unique_ptr<T> > queue;
+  void UpdateQueue(){
+    bool can_pop = true;
+    for(auto& val : queue_locations){
+      if(val.second == queue.begin()){
+        can_pop = false;
+        break;
+      }
+    }
+
+    if(can_pop){
+      queue.pop_front();
+      can_write_data.notify_one();
+    }
+  }
+
+  void Deregister(Receiver<T>* requester){
+    queue_locations.erase(requester);
+  }
+
+  std::deque<std::shared_ptr<T> > queue;
+  std::map<Receiver<T>*, typename std::deque<std::shared_ptr<T> >::iterator> queue_locations;
   size_t max_queue_size;
 
   std::condition_variable can_read_data;

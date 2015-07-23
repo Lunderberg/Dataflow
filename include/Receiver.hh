@@ -12,15 +12,16 @@ public:
   Receiver(std::shared_ptr<Producer<T> > source)
     : source(source) { }
 
-  virtual ~Receiver() { }
+  virtual ~Receiver() {
+    source->Deregister(this);
+  }
 
   const std::shared_ptr<T> Read(){
-    return source->Pop();
+    return source->Pop(this);
   }
 
 private:
   std::shared_ptr<Producer<T> > source;
-  std::atomic_bool running;
 };
 
 #endif /* _RECEIVER_H_ */

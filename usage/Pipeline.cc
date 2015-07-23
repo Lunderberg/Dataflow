@@ -23,10 +23,16 @@ void print_values(const std::shared_ptr<double> value){
   std::cout << *value << std::endl;
 }
 
+void print_with_hello(const std::shared_ptr<double> value){
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::cout << "Hello from " << *value << std::endl;
+}
+
 int main(){
   auto step1 = make_source(produce_count);
   auto step2 = make_transform(square_values, step1->GetProducer());
-  auto step3 = make_sink(print_values, step2->GetProducer());
+  auto step3a = make_sink(print_values, step2->GetProducer());
+  auto step3b = make_sink(print_with_hello, step2->GetProducer());
 
   std::cout << "Started" << std::endl;
   std::this_thread::sleep_for(std::chrono::seconds(5));
