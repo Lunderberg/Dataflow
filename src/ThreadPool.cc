@@ -20,8 +20,8 @@ void dataflow::ThreadPool::worker_thread() {
   while(running) {
     bool processed = false;
     for(auto& task : tasks){
-      IterationResult res = task->apply();
-      if(res == IterationResult::CONTINUE) {
+      IterationResult res = task->attempt();
+      if(res == IterationResult::SUCCESS) {
         processed = true;
         break;
       }

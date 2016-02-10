@@ -21,7 +21,7 @@ dataflow::IterationResult read_data(OutputQueue<int>& out) {
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   if(value < 10){
     out.push(value);
-    return dataflow::IterationResult::CONTINUE;
+    return dataflow::IterationResult::SUCCESS;
   } else {
     return dataflow::IterationResult::STOP;
   }
@@ -37,7 +37,7 @@ dataflow::IterationResult process_data(InputQueue<int>& in, OutputQueue<int>& ou
 
   if(has_data){
     out.push(input*input);
-    return dataflow::IterationResult::CONTINUE;
+    return dataflow::IterationResult::SUCCESS;
   } else {
     return dataflow::IterationResult::DELAY;
   }
@@ -49,7 +49,7 @@ dataflow::IterationResult write_data(InputQueue<int>& in) {
 
   if(has_data){
     std::cout << input << std::endl;
-    return dataflow::IterationResult::CONTINUE;
+    return dataflow::IterationResult::SUCCESS;
   } else {
     return dataflow::IterationResult::DELAY;
   }
