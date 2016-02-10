@@ -1,40 +1,72 @@
 #include <chrono>
 #include <iostream>
-#include <memory>
+#include <mutex>
 #include <thread>
 
-#include "MakeUnique.hh"
-#include "Source.hh"
-#include "Sink.hh"
-#include "Transform.hh"
+#include "dataflow/ThreadPool.hh"
 
-std::unique_ptr<double> produce_count(){
-  static double value = 0;
-  return make_unique<double>(value++);
-}
+dataflow::IterationResult read_data(OutputQueue<int>& out) {
+  if(out.size() >= out.max_size()){
+    return dataflow::IterationResult::DELAY;
+  }
 
-std::unique_ptr<double> square_values(const std::shared_ptr<double> value){
-  double x = *value;
-  return make_unique<double>(x*x);
-}
-
-void print_values(const std::shared_ptr<double> value){
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  std::cout << *value << std::endl;
-}
-
-void print_with_hello(const std::shared_ptr<double> value){
+  int value;
+  {
+    static std::mutex mutex;
+    static int i = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    i++;
+    value = i;
+  }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  std::cout << "Hello from " << *value << std::endl;
+  if(value < 10){
+    out.push(value);
+    return dataflow::IterationResult::CONTINUE;
+  } else {
+    return dataflow::IterationResult::STOP;
+  }
+}
+
+dataflow::IterationResult process_data(InputQueue<int>& in, OutputQueue<int>& out) {
+  if(out.size() >= out.max_size()){
+    return dataflow::IterationResult::DELAY;
+  }
+
+  int input;
+  bool has_data = in.try_pop(input);
+
+  if(has_data){
+    out.push(input*input);
+    return dataflow::IterationResult::CONTINUE;
+  } else {
+    return dataflow::IterationResult::DELAY;
+  }
+}
+
+dataflow::IterationResult write_data(InputQueue<int>& in) {
+  int input;
+  bool has_data = in.try_pop(input);
+
+  if(has_data){
+    std::cout << input << std::endl;
+    return dataflow::IterationResult::CONTINUE;
+  } else {
+    return dataflow::IterationResult::DELAY;
+  }
 }
 
 int main(){
-  auto step1 = make_source(produce_count);
-  auto step2 = make_transform(square_values, step1->GetProducer());
-  auto step3a = make_sink(print_values, step2->GetProducer());
-  auto step3b = make_sink(print_with_hello, step2->GetProducer());
+  dataflow::ThreadPool pool(5);
+  auto& raw_data = pool.make_queue<int>();
+  auto& processed_data = pool.make_queue<int>();
 
-  std::cout << "Started" << std::endl;
+  auto& read_task = pool.make_task(read_data, raw_data);
+  read_task.set_mode(dataflow::TaskMode::SINGLE);
+  pool.make_task(raw_data, process_data, processed_data);
+
+  auto& write_task = pool.make_task(processed_data, write_data);
+  write_task.set_mode(dataflow::TaskMode::SINGLE);
+
+  pool.start();
   std::this_thread::sleep_for(std::chrono::seconds(5));
-  std::cout << "Done sleeping" << std::endl;
 }
